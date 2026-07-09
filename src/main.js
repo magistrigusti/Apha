@@ -1,11 +1,5 @@
-// src/main.js
-// ========================================
-// Telegram бот — локальный запуск Альфы
-// ========================================
-
 import express from 'express';
 import dotenv from 'dotenv';
-dotenv.config();
 
 import {
   startPollingAlphaBot,
@@ -14,15 +8,17 @@ import {
   handleAlphaHttpRequest,
 } from './alpha-http.js';
 
-// ========== HTTP СЕРВЕР ДЛЯ RENDER ==========
-// Render требует чтобы сервис слушал порт
+
+dotenv.config();
+
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json({ limit: '64kb' }));
 
 app.get('/', (req, res) => {
-  res.send('Альфа в сети! Зион на связи.');
+  res.send('Альфа в сети. Allodium на связи.');
 });
 
 app.options('/api/alpha', (req, res) => {

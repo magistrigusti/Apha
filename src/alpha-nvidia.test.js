@@ -21,7 +21,7 @@ function createJsonResponse(
 }
 
 
-test('chatWithAlpha вызывает NVIDIA chat completions напрямую', async () => {
+test('chatWithAlpha sends the shared Alpha Core persona to NVIDIA', async () => {
   const calls = [];
 
   const result = await chatWithAlpha(
@@ -37,7 +37,7 @@ test('chatWithAlpha вызывает NVIDIA chat completions напрямую', 
         },
         {
           role: 'assistant',
-          content: 'Приветствую, странник.',
+          content: 'Привет. Я рядом.',
         },
       ],
       async fetch(url, request) {
@@ -52,7 +52,7 @@ test('chatWithAlpha вызывает NVIDIA chat completions напрямую', 
             {
               message: {
                 content:
-                  'Mercatus — внешний рынок Аллодиума.',
+                  'Mercatus - внешний рынок Аллодиума, который держат гномы @DominumGameBot.',
               },
             },
           ],
@@ -63,7 +63,7 @@ test('chatWithAlpha вызывает NVIDIA chat completions напрямую', 
 
   assert.equal(
     result.answer,
-    'Mercatus — внешний рынок Аллодиума.',
+    'Mercatus - внешний рынок Аллодиума, который держат гномы @DominumGameBot.',
   );
   assert.equal(calls.length, 1);
   assert.equal(
@@ -78,7 +78,15 @@ test('chatWithAlpha вызывает NVIDIA chat completions напрямую', 
   assert.equal(calls[0].body.messages[0].role, 'system');
   assert.match(
     calls[0].body.messages[0].content,
-    /Не раскрывай техническую инфраструктуру/,
+    /Альфа всегда друг и живой собеседник/,
+  );
+  assert.match(
+    calls[0].body.messages[0].content,
+    /привет друг давай знакомиться я дима/,
+  );
+  assert.doesNotMatch(
+    calls[0].body.messages[0].content,
+    /Рђ|Рќ|Рў|prototype/i,
   );
   assert.deepEqual(
     calls[0].body.messages.slice(-3),
@@ -89,7 +97,7 @@ test('chatWithAlpha вызывает NVIDIA chat completions напрямую', 
       },
       {
         role: 'assistant',
-        content: 'Приветствую, странник.',
+        content: 'Привет. Я рядом.',
       },
       {
         role: 'user',
@@ -100,7 +108,7 @@ test('chatWithAlpha вызывает NVIDIA chat completions напрямую', 
 });
 
 
-test('chatWithAlpha пробует fallback модель, если primary недоступна', async () => {
+test('chatWithAlpha tries a fallback model when primary model is unavailable', async () => {
   const models = [];
 
   const result = await chatWithAlpha(
@@ -146,7 +154,7 @@ test('chatWithAlpha пробует fallback модель, если primary не�
 });
 
 
-test('askAlpha не раскрывает провайдера, если ключ не настроен', async () => {
+test('askAlpha does not reveal provider details when API key is missing', async () => {
   const answer = await askAlpha(
     'Ты работаешь?',
     {
@@ -162,11 +170,11 @@ test('askAlpha не раскрывает провайдера, если ключ
 });
 
 
-test('chatWithAlpha просит вопрос, если строка пустая', async () => {
+test('chatWithAlpha asks for a message when the input is empty', async () => {
   const result = await chatWithAlpha('   ');
 
   assert.equal(
     result.answer,
-    'Напиши вопрос для Альфы.',
+    'Напиши вопрос или просто несколько слов для Альфы.',
   );
 });

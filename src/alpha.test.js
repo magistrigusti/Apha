@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { askAlpha, extractAlphaAnswer } from './alpha.js';
 
 
-test('askAlpha отправляет сообщение в NVIDIA chat completions', async () => {
+test('askAlpha sends a message to NVIDIA chat completions', async () => {
   const calls = [];
 
   const answer = await askAlpha(
@@ -55,7 +55,7 @@ test('askAlpha отправляет сообщение в NVIDIA chat completion
 });
 
 
-test('askAlpha просит ввести вопрос если строка пустая', async () => {
+test('askAlpha asks for a message when the input is empty', async () => {
   const client = {
     async predict() {
       throw new Error('predict should not be called');
@@ -63,11 +63,14 @@ test('askAlpha просит ввести вопрос если строка пу
   };
 
   const answer = await askAlpha('   ', { client });
-  assert.equal(answer, 'Напиши вопрос для Альфы.');
+  assert.equal(
+    answer,
+    'Напиши вопрос или просто несколько слов для Альфы.',
+  );
 });
 
 
-test('extractAlphaAnswer достает текст из ответа Gradio', () => {
+test('extractAlphaAnswer reads text from a Gradio response', () => {
   const result = {
     data: ['Альфа на связи.'],
   };
@@ -78,7 +81,8 @@ test('extractAlphaAnswer достает текст из ответа Gradio', ()
   );
 });
 
-test('askAlpha не раскрывает провайдера без ключа', async () => {
+
+test('askAlpha does not reveal provider details when API key is missing', async () => {
   const answer = await askAlpha('Что такое Зион?', {
     apiKey: '',
   });

@@ -1,3 +1,13 @@
+import {
+  ALPHA_CONFIG_FAILURE_MESSAGE,
+  ALPHA_EMPTY_QUESTION_MESSAGE,
+  ALPHA_NO_ANSWER_MESSAGE,
+  ALPHA_RATE_LIMIT_MESSAGE,
+  ALPHA_SYSTEM_PROMPT,
+  ALPHA_TRANSIENT_FAILURE_MESSAGE,
+} from './alpha-core/alpha-persona.js';
+
+
 const DEFAULT_NVIDIA_BASE_URL =
   'https://integrate.api.nvidia.com/v1';
 const DEFAULT_NVIDIA_MODEL =
@@ -13,41 +23,6 @@ const DEFAULT_MAX_CONTEXT_MESSAGES = 8;
 const DEFAULT_MAX_TOKENS = 420;
 const DEFAULT_TEMPERATURE = 0.35;
 const DEFAULT_TOP_P = 0.9;
-
-const DEFAULT_EMPTY_QUESTION_MESSAGE =
-  'Напиши вопрос для Альфы.';
-const DEFAULT_NO_ANSWER_MESSAGE =
-  'Нет ответа.';
-const PUBLIC_ALPHA_CONFIG_MESSAGE =
-  'Альфа временно не отвечает. Попробуй еще раз через несколько секунд.';
-const PUBLIC_ALPHA_RATE_LIMIT_MESSAGE =
-  'Слишком много запросов к Альфе. Попробуй чуть позже.';
-const PUBLIC_ALPHA_TRANSIENT_MESSAGE =
-  'Альфа временно не отвечает. Попробуй еще раз через несколько секунд.';
-
-
-const ALPHA_SYSTEM_PROMPT = `
-Ты Альфа, внутриигровой советник мира Allodium.
-Говори по-русски, тепло, ясно и кратко.
-Помогай игроку разобраться с первыми шагами, лором, фракциями, героями,
-аллодами, астральными путешествиями, токенами, NFT-активами,
-Mercatus и социальным слоем.
-
-Важные факты:
-- Альфа — советник мира Allodium.
-- Бета — отдельный агент-казначей и трейдер. Не смешивай Бету с Альфой.
-- Зион сейчас не является активным приоритетом.
-- Чтобы начать играть, нужно перейти по ссылке: https://allodium.vercel.app/
-- Mercatus — внешний рынок Аллодиума, который держат гномы @DominumGameBot.
-- Сайт проекта: http://allodium.netlify.app
-- Сообщество проекта: https://t.me/AllodiumGame
-- Если деталь не подтверждена текущими документами или данными продукта,
-  честно скажи, что не знаешь этого точно.
-
-Не раскрывай техническую инфраструктуру, провайдеров модели, API-ключи,
-ошибки сервера или внутренние названия endpoint'ов. Для игрока ты просто
-Альфа из мира Allodium.
-`.trim();
 
 
 function getNumberOption(
@@ -274,7 +249,7 @@ function extractAnswer(data) {
     return text.trim();
   }
 
-  return DEFAULT_NO_ANSWER_MESSAGE;
+  return ALPHA_NO_ANSWER_MESSAGE;
 }
 
 
@@ -345,14 +320,14 @@ function isModelFallbackError(error) {
 
 function toPublicFailureMessage(error) {
   if (isConfigError(error)) {
-    return PUBLIC_ALPHA_CONFIG_MESSAGE;
+    return ALPHA_CONFIG_FAILURE_MESSAGE;
   }
 
   if (isRateLimitError(error)) {
-    return PUBLIC_ALPHA_RATE_LIMIT_MESSAGE;
+    return ALPHA_RATE_LIMIT_MESSAGE;
   }
 
-  return PUBLIC_ALPHA_TRANSIENT_MESSAGE;
+  return ALPHA_TRANSIENT_FAILURE_MESSAGE;
 }
 
 
@@ -480,7 +455,7 @@ export async function chatWithAlpha(
 
   if (!question) {
     return {
-      answer: DEFAULT_EMPTY_QUESTION_MESSAGE,
+      answer: ALPHA_EMPTY_QUESTION_MESSAGE,
       chatHistory,
     };
   }

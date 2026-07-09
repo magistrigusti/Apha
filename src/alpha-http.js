@@ -1,9 +1,12 @@
+import {
+  ALPHA_EMPTY_QUESTION_MESSAGE,
+  ALPHA_HTTP_UNAVAILABLE_MESSAGE,
+  ALPHA_NO_ANSWER_MESSAGE,
+} from './alpha-core/alpha-persona.js';
 import { chatWithAlpha } from './alpha-nvidia.js';
 
 
 const ALLOWED_METHODS = 'POST, OPTIONS';
-const DEFAULT_EMPTY_MESSAGE =
-  'Напиши вопрос для Альфы.';
 
 
 function setCorsHeaders(res) {
@@ -85,7 +88,7 @@ function normalizeAlphaResult(result) {
     answer:
       typeof result?.answer === 'string'
         ? result.answer
-        : 'Нет ответа.',
+        : ALPHA_NO_ANSWER_MESSAGE,
     chatHistory: Array.isArray(result?.chatHistory)
       ? result.chatHistory
       : [],
@@ -118,7 +121,7 @@ export async function handleAlphaHttpRequest(
   if (!question) {
     return res.status(400).json({
       ok: false,
-      answer: DEFAULT_EMPTY_MESSAGE,
+      answer: ALPHA_EMPTY_QUESTION_MESSAGE,
       error: 'Missing message',
     });
   }
@@ -128,6 +131,7 @@ export async function handleAlphaHttpRequest(
       options.askAlpha ?? chatWithAlpha;
     const result = await ask(question, {
       chatHistory: readChatHistory(body),
+      context: body.context ?? {},
     });
     const normalized =
       normalizeAlphaResult(result);
@@ -142,8 +146,7 @@ export async function handleAlphaHttpRequest(
 
     return res.status(502).json({
       ok: false,
-      answer:
-        'Альфа временно недоступна. Повтори через 20-30 секунд.',
+      answer: ALPHA_HTTP_UNAVAILABLE_MESSAGE,
       error: 'Alpha unavailable',
     });
   }

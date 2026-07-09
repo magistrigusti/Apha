@@ -32,7 +32,7 @@ function createResponse() {
 }
 
 
-test('handleAlphaHttpRequest отвечает на preflight', async () => {
+test('handleAlphaHttpRequest answers preflight', async () => {
   const response = createResponse();
 
   await handleAlphaHttpRequest(
@@ -50,7 +50,7 @@ test('handleAlphaHttpRequest отвечает на preflight', async () => {
 });
 
 
-test('handleAlphaHttpRequest вызывает Alpha с историей диалога', async () => {
+test('handleAlphaHttpRequest calls Alpha with chat history and context', async () => {
   const response = createResponse();
   const calls = [];
 
@@ -65,6 +65,9 @@ test('handleAlphaHttpRequest вызывает Alpha с историей диал
             content: 'Привет',
           },
         ],
+        context: {
+          surface: 'network',
+        },
       },
     },
     response,
@@ -72,12 +75,12 @@ test('handleAlphaHttpRequest вызывает Alpha с историей диал
       async askAlpha(question, options) {
         calls.push([question, options]);
         return {
-          answer: 'Mercatus — рынок Аллодиума.',
+          answer: 'Mercatus - рынок Аллодиума.',
           chatHistory: [
             ...options.chatHistory,
             {
               role: 'assistant',
-              content: 'Mercatus — рынок Аллодиума.',
+              content: 'Mercatus - рынок Аллодиума.',
             },
           ],
         };
@@ -95,11 +98,14 @@ test('handleAlphaHttpRequest вызывает Alpha с историей диал
           content: 'Привет',
         },
       ],
+      context: {
+        surface: 'network',
+      },
     },
   ]]);
   assert.deepEqual(response.jsonBody, {
     ok: true,
-    answer: 'Mercatus — рынок Аллодиума.',
+    answer: 'Mercatus - рынок Аллодиума.',
     chatHistory: [
       {
         role: 'user',
@@ -107,14 +113,14 @@ test('handleAlphaHttpRequest вызывает Alpha с историей диал
       },
       {
         role: 'assistant',
-        content: 'Mercatus — рынок Аллодиума.',
+        content: 'Mercatus - рынок Аллодиума.',
       },
     ],
   });
 });
 
 
-test('handleAlphaHttpRequest просит сообщение, если вопрос пустой', async () => {
+test('handleAlphaHttpRequest asks for a message when the question is empty', async () => {
   const response = createResponse();
 
   await handleAlphaHttpRequest(
@@ -129,6 +135,6 @@ test('handleAlphaHttpRequest просит сообщение, если вопр�
   assert.equal(response.statusCode, 400);
   assert.equal(
     response.jsonBody.answer,
-    'Напиши вопрос для Альфы.',
+    'Напиши вопрос или просто несколько слов для Альфы.',
   );
 });
