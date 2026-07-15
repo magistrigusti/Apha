@@ -12,13 +12,18 @@ services:
 
     buildCommand: npm install
     startCommand: npm start
+    healthCheckPath: /
 
     envVars:
       - key: ALPHA_BOT_TOKEN
         sync: false
-      - key: ALPHA_SPACE_ID
-        value: magistrigusti/allod-alpha
-      - key: HF_TOKEN
+      - key: NVIDIA_API_KEY
         sync: false
+      - key: NVIDIA_BASE_URL
+        value: https://integrate.api.nvidia.com/v1
+      - key: NVIDIA_MODEL
+        value: nvidia/nvidia-nemotron-nano-9b-v2
+      - key: ALPHA_TELEGRAM_MODE
+        value: webhook
       - key: NODE_VERSION
         value: "22"

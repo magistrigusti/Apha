@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 
 import {
   prepareTelegramForPolling,
+  startAlphaBotRuntime,
   startPollingAlphaBot,
+  startWebhookAlphaBot,
 } from './telegram-runtime.js';
 
 
@@ -87,4 +89,64 @@ test('startPollingAlphaBot запускает bot.launch после подгот
     'getWebhookInfo',
     'launch',
   ]);
+});
+
+
+test('startWebhookAlphaBot registers the Render webhook without polling', async () => {
+  const calls = [];
+  const bot = {
+    telegram: {
+      async setWebhook(url, options) {
+        calls.push([url, options]);
+      },
+    },
+    async launch() {
+      calls.push(['launch']);
+    },
+  };
+
+  const result = await startWebhookAlphaBot({
+    bot,
+    publicUrl: 'https://alpha-bot.onrender.com',
+    secretToken: 'secret',
+  });
+
+  assert.equal(result.mode, 'webhook');
+  assert.equal(
+    result.webhookUrl,
+    'https://alpha-bot.onrender.com/api/telegram',
+  );
+  assert.deepEqual(calls, [[
+    'https://alpha-bot.onrender.com/api/telegram',
+    {
+      drop_pending_updates: false,
+      secret_token: 'secret',
+    },
+  ]]);
+});
+
+
+test('startAlphaBotRuntime uses webhook mode on Render', async () => {
+  const calls = [];
+  const bot = {
+    telegram: {
+      async setWebhook(url) {
+        calls.push(['setWebhook', url]);
+      },
+    },
+    async launch() {
+      calls.push(['launch']);
+    },
+  };
+
+  const result = await startAlphaBotRuntime({
+    bot,
+    publicUrl: 'https://alpha-bot.onrender.com',
+  });
+
+  assert.equal(result.mode, 'webhook');
+  assert.deepEqual(calls, [[
+    'setWebhook',
+    'https://alpha-bot.onrender.com/api/telegram',
+  ]]);
 });

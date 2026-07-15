@@ -2,12 +2,17 @@ import { Telegraf } from 'telegraf';
 import { message } from 'telegraf/filters';
 
 import { chatWithAlpha } from './alpha-nvidia.js';
+import {
+  ALPHA_TRANSIENT_FAILURE_MESSAGE,
+} from './alpha-core/alpha-persona.js';
 import { replaceWaitingMessage } from './telegram-reply.js';
 
 
 export const DEFAULT_BOT_USERNAME =
   'AlphaAllod_bot';
 const DEFAULT_CHAT_HISTORY_LIMIT = 24;
+export const ALPHA_WAITING_MESSAGE =
+  'Я на связи. Считаю звезды и собираю ответ...';
 
 let alphaBotInstance = null;
 const alphaChatSessions = new Map();
@@ -163,16 +168,30 @@ async function replyFromAlpha(
     sessionStore,
     sessionKey,
   );
-  const wait = await ctx.reply('Думаю...');
-  const result = await ask(question, {
-    chatHistory,
-  });
-  const normalizedResult =
-    normalizeAlphaReply(
+  const wait = await ctx.reply(
+    ALPHA_WAITING_MESSAGE,
+  );
+  let normalizedResult;
+
+  try {
+    const result = await ask(question, {
+      chatHistory,
+    });
+    normalizedResult = normalizeAlphaReply(
       result,
       question,
       chatHistory,
     );
+  } catch (error) {
+    console.error(
+      '[Alpha Telegram] Alpha Core failed:',
+      error,
+    );
+    normalizedResult = {
+      answer: ALPHA_TRANSIENT_FAILURE_MESSAGE,
+      chatHistory,
+    };
+  }
 
   writeChatHistory(
     sessionStore,
@@ -303,10 +322,32 @@ export function createAlphaBot(
   }
 
   const bot = new Telegraf(token);
-  return registerAlphaBotHandlers(
+  registerAlphaBotHandlers(
     bot,
     options,
   );
+
+  bot.catch(async (error, ctx) => {
+    console.error(
+      '[Alpha Telegram] Update failed:',
+      error,
+    );
+
+    if (!ctx.chat?.id) return;
+
+    try {
+      await ctx.reply(
+        ALPHA_TRANSIENT_FAILURE_MESSAGE,
+      );
+    } catch (replyError) {
+      console.error(
+        '[Alpha Telegram] Failure reply failed:',
+        replyError,
+      );
+    }
+  });
+
+  return bot;
 }
 
 

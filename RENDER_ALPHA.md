@@ -1,77 +1,75 @@
-# Альфа — Telegram бот на Render
+# Альфа в Telegram на Render
 
-Бот работает в облаке 24/7 и отвечает в Telegram.
-Источник ответа — Hugging Face Space Альфы.
-
----
-
-## Как это работает
-
-`Telegram -> Render bot -> HF Space /ask -> ответ игроку`
-
-Важно:
-- Render-версия использует `polling`
-- если раньше у бота был webhook, новый старт сам снимает его
-- поэтому после деплоя Render-бот не должен упираться в `409 conflict`
-
----
-
-## Быстрый старт (Blueprint)
-
-1. Зайди на [dashboard.render.com](https://dashboard.render.com)
-2. Выбери **New -> Blueprint**
-3. Подключи репо `magistrigusti/Apha_Friend-gamers-allodium`
-4. Render подхватит `render.yaml` — нажми **Apply**
-5. В настройках сервиса **alpha-bot** заполни переменные:
-   - `ALPHA_BOT_TOKEN` = токен от @BotFather
-   - `ALPHA_SPACE_ID` = `magistrigusti/allod-alpha`
-   - `HF_TOKEN` = нужен только если Space приватный
-6. Дождись деплоя
-
----
-
-## Ручной деплой
-
-Создай **Web Service**:
-
-| Поле | Значение |
-|------|----------|
-| Build | `npm install` |
-| Start | `npm start` |
-| Env | `ALPHA_BOT_TOKEN`, `ALPHA_SPACE_ID`, `HF_TOKEN` |
-
-`ALPHA_SPACE_ID` по умолчанию:
+Альфа использует один Alpha Core на NVIDIA и принимает сообщения Telegram через webhook.
 
 ```text
-magistrigusti/allod-alpha
+Telegram -> Render /api/telegram -> Alpha Core -> NVIDIA -> ответ
 ```
 
----
+## Почему webhook
 
-## Что важно проверить
+Бесплатный Render останавливает web service после периода без входящего трафика. Polling работает только пока процесс уже запущен и поэтому не может разбудить уснувший сервис. Webhook превращает каждое сообщение Telegram во входящий HTTP-запрос, который будит Render.
 
-1. В логах Render должен быть:
-   - `[Server] Port ...`
-   - `[Alpha Bot] Started!`
-2. Если раньше бот работал через webhook, в логах может появиться:
-   - `[Alpha Bot] Removed webhook for polling mode: ...`
-3. В браузере URL сервиса должен отвечать:
-   - `Альфа в сети! Зион на связи.`
+После пробуждения Альфа сразу пишет временную реплику про звёзды, а затем заменяет её полноценным ответом. Само пробуждение бесплатного Render может занять заметное время: пока процесс спит, код Альфы физически не выполняется.
 
----
+## Переменные окружения
 
-## Если Telegram всё ещё молчит
+Обязательные:
 
-Проверь:
-- верный ли `ALPHA_BOT_TOKEN`
-- не запущен ли где-то второй экземпляр этого же бота
-- доступны ли логи Render
-- отвечает ли сам HF Space в браузере
+- `ALPHA_BOT_TOKEN` - токен `@AlphaAllod_bot`.
+- `NVIDIA_API_KEY` - ключ NVIDIA NIM.
 
----
+Значения из `render.yaml`:
+
+- `ALPHA_TELEGRAM_MODE=webhook`
+- `NVIDIA_BASE_URL=https://integrate.api.nvidia.com/v1`
+- `NVIDIA_MODEL=nvidia/nvidia-nemotron-nano-9b-v2`
+- `NODE_VERSION=22`
+
+Render автоматически предоставляет `RENDER_EXTERNAL_URL`. Альфа собирает адрес webhook как:
+
+```text
+${RENDER_EXTERNAL_URL}/api/telegram
+```
+
+Опционально можно добавить `TELEGRAM_WEBHOOK_SECRET`. Если он задан, Альфа проверяет заголовок Telegram перед обработкой сообщения.
+
+## Деплой
+
+1. Подключи репозиторий `magistrigusti/Apha_Friend-gamers-allodium` как Render Web Service или Blueprint.
+2. Проверь `Build Command`: `npm install`.
+3. Проверь `Start Command`: `npm start`.
+4. Добавь `ALPHA_BOT_TOKEN` и `NVIDIA_API_KEY`.
+5. Запусти deploy последнего коммита.
+
+В журнале успешного запуска должны появиться строки:
+
+```text
+[Server] Port ...
+[Alpha Bot] Webhook: https://<service>.onrender.com/api/telegram
+[Alpha Bot] Started in webhook mode!
+```
+
+## Локальная разработка
+
+Локально оставь:
+
+```text
+ALPHA_TELEGRAM_MODE=polling
+```
+
+Не запускай локальный polling одновременно с production webhook: один Telegram-бот должен использовать только один способ получения обновлений.
 
 ## Проверка
 
-- URL сервиса в браузере: `Альфа в сети! Зион на связи.`
-- Telegram `@AlphaAllod_bot` — отправь `/start`
-- потом отправь `/ask Что такое Аллод?`
+После deploy отправь Альфе в личном чате:
+
+```text
+Альфа, ты на связи?
+```
+
+Ожидаемое поведение:
+
+1. Если Render спал, Telegram-запрос будит сервис.
+2. Альфа пишет: `Я на связи. Считаю звезды и собираю ответ...`
+3. Временное сообщение заменяется ответом Alpha Core.

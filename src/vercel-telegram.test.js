@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
   handleTelegramWebhook,
+  handleTelegramWebhookInBackground,
   registerTelegramWebhook,
 } from './vercel-telegram.js';
 
@@ -133,4 +134,44 @@ test('registerTelegramWebhook регистрирует webhook по текуще
     'https://apha-ai-v0-1.vercel.app/api/telegram',
     { secret_token: 'telegram-secret' },
   ]]);
+});
+
+
+test('background webhook acknowledges Telegram before Alpha finishes', async () => {
+  let finishUpdate;
+  const updateFinished = new Promise((resolve) => {
+    finishUpdate = resolve;
+  });
+  const response = createResponse();
+  const calls = [];
+  const update = {
+    update_id: 2,
+    message: {
+      text: 'Привет, Альфа',
+    },
+  };
+
+  const processing = handleTelegramWebhookInBackground(
+    {
+      method: 'POST',
+      headers: {},
+      body: update,
+    },
+    response,
+    {
+      bot: {
+        async handleUpdate(nextUpdate) {
+          calls.push(nextUpdate);
+          await updateFinished;
+        },
+      },
+    },
+  );
+
+  assert.equal(response.ended, true);
+  assert.deepEqual(response.jsonBody, { ok: true });
+  assert.deepEqual(calls, [update]);
+
+  finishUpdate();
+  await processing;
 });

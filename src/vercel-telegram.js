@@ -97,6 +97,62 @@ export async function handleTelegramWebhook(
 }
 
 
+export async function handleTelegramWebhookInBackground(
+  req,
+  res,
+  options = {},
+) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    return res.status(405).json({
+      ok: false,
+      error: 'Method Not Allowed',
+    });
+  }
+
+  const secretToken =
+    normalizeSecretValue(
+      options.secretToken
+      ?? process.env.TELEGRAM_WEBHOOK_SECRET
+      ?? '',
+    );
+  const incomingSecret =
+    normalizeSecretValue(
+      readHeader(
+        req,
+        'x-telegram-bot-api-secret-token',
+      ) ?? '',
+    );
+
+  if (
+    secretToken
+    && incomingSecret !== secretToken
+  ) {
+    return res.status(401).json({
+      ok: false,
+      error: 'Unauthorized',
+    });
+  }
+
+  const bot = options.bot ?? getAlphaBot();
+
+  res.status(200).json({ ok: true });
+
+  try {
+    await bot.handleUpdate(req.body);
+  } catch (error) {
+    const onError = options.onError
+      ?? ((nextError) => {
+        console.error(
+          '[Alpha Telegram Webhook]',
+          nextError,
+        );
+      });
+    onError(error);
+  }
+}
+
+
 export async function registerTelegramWebhook(
   req,
   res,
