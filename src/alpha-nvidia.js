@@ -6,6 +6,9 @@ import {
   ALPHA_SYSTEM_PROMPT,
   ALPHA_TRANSIENT_FAILURE_MESSAGE,
 } from './alpha-core/alpha-persona.js';
+import {
+  buildAlphaKnowledgeContext,
+} from './alpha-core/alpha-knowledge.js';
 
 
 const DEFAULT_NVIDIA_BASE_URL =
@@ -221,11 +224,23 @@ function buildMessages(
   const recentHistory =
     normalizeChatHistory(chatHistory)
       .slice(-maxContextMessages);
+  const knowledgeContext =
+    buildAlphaKnowledgeContext(
+      question,
+      {
+        context: options.context,
+        limit: options.maxKnowledgeRecords,
+      },
+    );
+  const systemPrompt = [
+    ALPHA_SYSTEM_PROMPT,
+    knowledgeContext,
+  ].join('\n\n');
 
   return [
     {
       role: 'system',
-      content: ALPHA_SYSTEM_PROMPT,
+      content: systemPrompt,
     },
     ...recentHistory,
     {

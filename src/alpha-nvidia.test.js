@@ -52,7 +52,7 @@ test('chatWithAlpha sends the shared Alpha Core persona to NVIDIA', async () => 
             {
               message: {
                 content:
-                  'Mercatus - внешний рынок Аллодиума, который держат гномы @DominumGameBot.',
+                  'Mercatus — рыночный и экономический контур экосистемы.',
               },
             },
           ],
@@ -63,7 +63,7 @@ test('chatWithAlpha sends the shared Alpha Core persona to NVIDIA', async () => 
 
   assert.equal(
     result.answer,
-    'Mercatus - внешний рынок Аллодиума, который держат гномы @DominumGameBot.',
+    'Mercatus — рыночный и экономический контур экосистемы.',
   );
   assert.equal(calls.length, 1);
   assert.equal(
@@ -83,6 +83,14 @@ test('chatWithAlpha sends the shared Alpha Core persona to NVIDIA', async () => 
   assert.match(
     calls[0].body.messages[0].content,
     /привет друг давай знакомиться я дима/,
+  );
+  assert.match(
+    calls[0].body.messages[0].content,
+    /Альфа — мужчина/,
+  );
+  assert.match(
+    calls[0].body.messages[0].content,
+    /Mercatus — рыночный и экономический контур/,
   );
   assert.doesNotMatch(
     calls[0].body.messages[0].content,
