@@ -14,9 +14,9 @@ import {
 const DEFAULT_NVIDIA_BASE_URL =
   'https://integrate.api.nvidia.com/v1';
 const DEFAULT_NVIDIA_MODEL =
-  'deepseek-ai/deepseek-v4.1-flash';
+  'z-ai/glm-5.3-flash';
 const DEFAULT_NVIDIA_MODEL_FALLBACKS = [
-  'z-ai/glm-5.3-flash',
+  'openai/gpt-oss-20b',
 ];
 const DEFAULT_ALPHA_REQUEST_TIMEOUT_MS = 25000;
 const DEFAULT_MAX_CONTEXT_MESSAGES = 8;
@@ -167,7 +167,7 @@ function getNvidiaApiKey(options = {}) {
 function getFallbackApiKey(options = {}) {
   return String(
     options.fallbackApiKey
-      ?? process.env.ALPHA_MODEL_FALLBACKS
+      ?? process.env.ALPHA_API_FALLBACKS
       ?? '',
   ).trim() || getNvidiaApiKey(options);
 }

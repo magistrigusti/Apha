@@ -191,7 +191,7 @@ test('chatWithAlpha asks for a message when the input is empty', async () => {
 test('environment keys select separate credentials for primary and fallback', async (t) => {
   const settings = {
     ALPHA_API_KEY: 'primary-test-key',
-    ALPHA_MODEL_FALLBACKS: 'fallback-test-key',
+    ALPHA_API_FALLBACKS: 'fallback-test-key',
     NVIDIA_MODEL: 'test/primary',
     NVIDIA_MODEL_FALLBACKS: 'test/fallback',
   };

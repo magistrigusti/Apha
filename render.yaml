@@ -19,14 +19,14 @@ services:
         sync: false
       - key: ALPHA_API_KEY
         sync: false
-      - key: ALPHA_MODEL_FALLBACKS
+      - key: ALPHA_API_FALLBACKS
         sync: false
       - key: NVIDIA_BASE_URL
         value: https://integrate.api.nvidia.com/v1
       - key: NVIDIA_MODEL
-        value: deepseek-ai/deepseek-v4.1-flash
-      - key: NVIDIA_MODEL_FALLBACKS
         value: z-ai/glm-5.3-flash
+      - key: NVIDIA_MODEL_FALLBACKS
+        value: openai/gpt-oss-20b
       - key: ALPHA_TELEGRAM_MODE
         value: webhook
       - key: NODE_VERSION
