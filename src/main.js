@@ -100,10 +100,10 @@ async function bootstrap() {
     );
 
     process.once('SIGINT', () => {
-      activeBot?.stop('SIGINT');
+      if (mode === 'polling') activeBot?.stop('SIGINT');
     });
     process.once('SIGTERM', () => {
-      activeBot?.stop('SIGTERM');
+      if (mode === 'polling') activeBot?.stop('SIGTERM');
     });
   } catch (error) {
     console.error(
