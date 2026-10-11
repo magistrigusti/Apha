@@ -186,3 +186,79 @@ test('chatWithAlpha asks for a message when the input is empty', async () => {
     'Напиши вопрос или просто несколько слов для Альфы.',
   );
 });
+
+
+test('environment keys select separate credentials for primary and fallback', async (t) => {
+  const settings = {
+    ALPHA_API_KEY: 'primary-test-key',
+    ALPHA_MODEL_FALLBACKS: 'fallback-test-key',
+    NVIDIA_MODEL: 'test/primary',
+    NVIDIA_MODEL_FALLBACKS: 'test/fallback',
+  };
+  const previous = Object.fromEntries(
+    Object.keys(settings).map((key) => [key, process.env[key]]),
+  );
+  t.after(() => {
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  });
+  Object.assign(process.env, settings);
+  const calls = [];
+  const result = await chatWithAlpha('Привет', {
+    async fetch(_url, request) {
+      calls.push({
+        model: JSON.parse(request.body).model,
+        authorization: request.headers.Authorization,
+      });
+      return calls.length === 1
+        ? createJsonResponse(401, { error: { message: 'invalid key' } })
+        : createJsonResponse(200, {
+          choices: [{ message: { content: 'Я рядом.' } }],
+        });
+    },
+  });
+  assert.equal(result.answer, 'Я рядом.');
+  assert.deepEqual(calls, [
+    { model: 'test/primary', authorization: 'Bearer primary-test-key' },
+    { model: 'test/fallback', authorization: 'Bearer fallback-test-key' },
+  ]);
+});
+
+
+test('empty fallback key reuses primary and never appends retired models', async () => {
+  const calls = [];
+  await chatWithAlpha('Привет', {
+    apiKey: 'primary-test-key',
+    fallbackApiKey: '',
+    model: 'test/primary',
+    fallbackModels: ['test/fallback'],
+    async fetch(_url, request) {
+      calls.push({
+        model: JSON.parse(request.body).model,
+        authorization: request.headers.Authorization,
+      });
+      return createJsonResponse(503, { error: { message: 'unavailable' } });
+    },
+  });
+  assert.deepEqual(calls, [
+    { model: 'test/primary', authorization: 'Bearer primary-test-key' },
+    { model: 'test/fallback', authorization: 'Bearer primary-test-key' },
+  ]);
+});
+
+
+test('authorization failure does not retry the same key on another model', async () => {
+  let calls = 0;
+  await chatWithAlpha('Привет', {
+    apiKey: 'invalid-test-key',
+    fallbackApiKey: '',
+    fallbackModels: ['test/fallback'],
+    async fetch() {
+      calls++;
+      return createJsonResponse(401, { error: { message: 'invalid key' } });
+    },
+  });
+  assert.equal(calls, 1);
+});

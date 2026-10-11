@@ -14,12 +14,9 @@ import {
 const DEFAULT_NVIDIA_BASE_URL =
   'https://integrate.api.nvidia.com/v1';
 const DEFAULT_NVIDIA_MODEL =
-  'nvidia/nvidia-nemotron-nano-9b-v2';
+  'deepseek-ai/deepseek-v4.1-flash';
 const DEFAULT_NVIDIA_MODEL_FALLBACKS = [
-  'nvidia/llama-3.1-nemotron-nano-8b-v1',
-  'meta/llama-3.1-8b-instruct',
-  'mistralai/mistral-small-24b-instruct',
-  'mistralai/mistral-7b-instruct-v0.3',
+  'z-ai/glm-5.3-flash',
 ];
 const DEFAULT_ALPHA_REQUEST_TIMEOUT_MS = 25000;
 const DEFAULT_MAX_CONTEXT_MESSAGES = 8;
@@ -138,12 +135,13 @@ function getNvidiaModels(options = {}) {
     ?? DEFAULT_NVIDIA_MODEL;
   const fallbackModels =
     options.fallbackModels
-    ?? splitModels(process.env.NVIDIA_MODEL_FALLBACKS);
+    ?? (process.env.NVIDIA_MODEL_FALLBACKS === undefined
+      ? DEFAULT_NVIDIA_MODEL_FALLBACKS
+      : splitModels(process.env.NVIDIA_MODEL_FALLBACKS));
 
   return uniqueValues([
     primaryModel,
     ...fallbackModels,
-    ...DEFAULT_NVIDIA_MODEL_FALLBACKS,
   ]);
 }
 
@@ -160,9 +158,18 @@ function getNvidiaBaseUrl(options = {}) {
 function getNvidiaApiKey(options = {}) {
   return String(
     options.apiKey
-      ?? process.env.NVIDIA_API_KEY
+      ?? process.env.ALPHA_API_KEY
       ?? '',
   ).trim();
+}
+
+
+function getFallbackApiKey(options = {}) {
+  return String(
+    options.fallbackApiKey
+      ?? process.env.ALPHA_MODEL_FALLBACKS
+      ?? '',
+  ).trim() || getNvidiaApiKey(options);
 }
 
 
@@ -306,7 +313,7 @@ function readNvidiaError(data) {
 function isConfigError(error) {
   const status = error?.status;
   return (
-    error?.code === 'NVIDIA_API_KEY_MISSING'
+    error?.code === 'ALPHA_API_KEY_MISSING'
     || status === 401
     || status === 403
   );
@@ -354,8 +361,8 @@ async function requestNvidiaChat(
   const apiKey = getNvidiaApiKey(options);
 
   if (!apiKey) {
-    const error = new Error('NVIDIA_API_KEY is not set');
-    error.code = 'NVIDIA_API_KEY_MISSING';
+    const error = new Error('ALPHA_API_KEY is not set');
+    error.code = 'ALPHA_API_KEY_MISSING';
     throw error;
   }
 
@@ -430,12 +437,15 @@ async function askNvidia(
   const models = getNvidiaModels(options);
   let lastError = null;
 
-  for (const model of models) {
+  for (const [index, model] of models.entries()) {
+    const apiKey = index === 0
+      ? getNvidiaApiKey(options)
+      : getFallbackApiKey(options);
     try {
       return await requestNvidiaChat(
         model,
         messages,
-        options,
+        { ...options, apiKey },
       );
     } catch (error) {
       lastError = error;
@@ -445,11 +455,14 @@ async function askNvidia(
         getErrorText(error),
       );
 
-      if (
-        isConfigError(error)
-        || isRateLimitError(error)
-        || !isModelFallbackError(error)
-      ) {
+      const canTrySeparateKey = index === 0
+        && Boolean(getFallbackApiKey(options))
+        && getFallbackApiKey(options) !== apiKey;
+      const shouldStop = isConfigError(error)
+        ? !canTrySeparateKey
+        : isRateLimitError(error) || !isModelFallbackError(error);
+
+      if (shouldStop) {
         break;
       }
     }

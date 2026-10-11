@@ -17,13 +17,15 @@ Telegram -> Render /api/telegram -> Alpha Core -> NVIDIA -> ответ
 Обязательные:
 
 - `ALPHA_BOT_TOKEN` - токен `@AlphaAllod_bot`.
-- `NVIDIA_API_KEY` - ключ NVIDIA NIM.
+- `ALPHA_API_KEY` - основной ключ NVIDIA NIM.
+- `ALPHA_MODEL_FALLBACKS` - отдельный ключ NVIDIA для резервных моделей. Если пустой, используется основной ключ.
 
 Значения из `render.yaml`:
 
 - `ALPHA_TELEGRAM_MODE=webhook`
 - `NVIDIA_BASE_URL=https://integrate.api.nvidia.com/v1`
-- `NVIDIA_MODEL=nvidia/nvidia-nemotron-nano-9b-v2`
+- `NVIDIA_MODEL=deepseek-ai/deepseek-v4.1-flash`
+- `NVIDIA_MODEL_FALLBACKS=z-ai/glm-5.3-flash` - идентификаторы резервных моделей, не ключи.
 - `NODE_VERSION=22`
 
 Render автоматически предоставляет `RENDER_EXTERNAL_URL`. Альфа собирает адрес webhook как:
@@ -39,7 +41,7 @@ ${RENDER_EXTERNAL_URL}/api/telegram
 1. Подключи репозиторий `magistrigusti/Apha_Friend-gamers-allodium` как Render Web Service или Blueprint.
 2. Проверь `Build Command`: `npm install`.
 3. Проверь `Start Command`: `npm start`.
-4. Добавь `ALPHA_BOT_TOKEN` и `NVIDIA_API_KEY`.
+4. Добавь `ALPHA_BOT_TOKEN`, `ALPHA_API_KEY` и, если нужен отдельный резервный ключ, `ALPHA_MODEL_FALLBACKS`.
 5. Запусти deploy последнего коммита.
 
 В журнале успешного запуска должны появиться строки:
