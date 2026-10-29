@@ -262,3 +262,38 @@ test('authorization failure does not retry the same key on another model', async
   });
   assert.equal(calls, 1);
 });
+
+for (const [name, budget, parts, reasons, expected] of [
+  ['no short default cap', undefined, [' Ready. '], ['stop'], 'Ready.'],
+  ['preserves long output', 0, ['world '.repeat(3000)],
+    ['stop'], 'world '.repeat(3000).trim()],
+  ['continues midword', 2, ['A liv', 'ing world', '.'],
+    ['length', 'length', 'stop'], 'A living world.'],
+  ['rejects empty continuation', 0, [''], ['length'], null],
+  ['rejects repeated continuation', 2, ['part', 'part'],
+    ['length', 'length'], null],
+]) {
+  test('NVIDIA completion lifecycle: ' + name, async () => {
+    const calls = [];
+    const result = await chatWithAlpha('Tell me about Allodium', {
+      apiKey: 'test-key', fallbackModels: [], maxTokens: budget,
+      async fetch(_url, request) {
+        const index = calls.length;
+        calls.push(JSON.parse(request.body));
+        return createJsonResponse(200, { choices: [{
+          message: { content: parts[index] }, finish_reason: reasons[index],
+        }] });
+      },
+    });
+    assert.equal(calls.length, parts.length);
+    if (budget) assert.equal(calls[0].max_tokens, budget);
+    else assert.equal(Object.hasOwn(calls[0], 'max_tokens'), false);
+    if (expected !== null) assert.equal(result.answer, expected);
+    else assert.notEqual(result.answer, parts.join(''));
+    if (expected && calls.length > 1) {
+      const messages = calls.at(-1).messages;
+      assert.equal(messages.at(-2).role, 'assistant');
+      assert.equal(messages.at(-2).content, parts.slice(0, -1).join(''));
+    }
+  });
+}

@@ -18,9 +18,8 @@ const DEFAULT_NVIDIA_MODEL =
 const DEFAULT_NVIDIA_MODEL_FALLBACKS = [
   'openai/gpt-oss-20b',
 ];
-const DEFAULT_ALPHA_REQUEST_TIMEOUT_MS = 25000;
+const DEFAULT_ALPHA_REQUEST_TIMEOUT_MS = 90_000;
 const DEFAULT_MAX_CONTEXT_MESSAGES = 8;
-const DEFAULT_MAX_TOKENS = 420;
 const DEFAULT_TEMPERATURE = 0.35;
 const DEFAULT_TOP_P = 0.9;
 
@@ -85,7 +84,7 @@ function getMaxTokens(options = {}) {
   return getIntegerOption(
     options.maxTokens
       ?? process.env.ALPHA_MAX_TOKENS,
-    DEFAULT_MAX_TOKENS,
+    undefined,
     (value) => value > 0,
   );
 }
@@ -263,12 +262,12 @@ function extractAnswer(data) {
     data?.choices?.[0]?.message?.content;
 
   if (typeof content === 'string' && content.trim()) {
-    return content.trim();
+    return content;
   }
 
   const text = data?.choices?.[0]?.text;
   if (typeof text === 'string' && text.trim()) {
-    return text.trim();
+    return text;
   }
 
   return ALPHA_NO_ANSWER_MESSAGE;
@@ -373,41 +372,60 @@ async function requestNvidiaChat(
   }, timeoutMs);
 
   try {
-    const response = await (options.fetch ?? fetch)(
-      `${getNvidiaBaseUrl(options)}/chat/completions`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
+    let answer = '', previous = '';
+    let conversation = messages;
+    while (true) {
+      controller.signal.throwIfAborted();
+      const response = await (options.fetch ?? fetch)(
+        `${getNvidiaBaseUrl(options)}/chat/completions`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify({
+            model,
+            messages: conversation,
+            max_tokens: getMaxTokens(options),
+            temperature: getTemperature(options),
+            top_p: getTopP(options),
+          }),
+          signal: controller.signal,
         },
-        body: JSON.stringify({
-          model,
-          messages,
-          max_tokens: getMaxTokens(options),
-          temperature: getTemperature(options),
-          top_p: getTopP(options),
-        }),
-        signal: controller.signal,
-      },
-    );
-
-    const data = await response
-      .json()
-      .catch(() => ({}));
-
-    if (!response.ok) {
-      const error = new Error(
-        readNvidiaError(data)
-          || `NVIDIA API ${response.status}`,
       );
-      error.status = response.status;
-      error.data = data;
-      throw error;
-    }
 
-    return extractAnswer(data);
+      const data = await response
+        .json()
+        .catch(() => ({}));
+
+      if (!response.ok) {
+        const error = new Error(
+          readNvidiaError(data)
+            || `NVIDIA API ${response.status}`,
+        );
+        error.status = response.status;
+        error.data = data;
+        throw error;
+      }
+
+      const fragment = extractAnswer(data);
+      if (data?.choices?.[0]?.finish_reason !== 'length') {
+        return (answer + fragment).trim();
+      }
+      if (!fragment.trim() || fragment === previous
+        || fragment === ALPHA_NO_ANSWER_MESSAGE) {
+        const error = new Error('NVIDIA continuation made no progress');
+        error.status = 502; throw error;
+      }
+      answer += fragment; previous = fragment;
+      conversation = [...messages,
+        { role: 'assistant', content: answer },
+        { role: 'user', content: 'Continue the unfinished answer exactly'
+          + ' from its last character, without repeating previous text.' },
+      ];
+    }
   } catch (error) {
     if (error?.name === 'AbortError') {
       const timeoutError = new Error(
